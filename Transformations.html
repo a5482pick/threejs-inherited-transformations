@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <script src="three.js"></script>
+        <script src="OrbitControls.js"></script>
+        <style>
+            body {
+                margin: 0;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+
+<body>
+    <script>
+
+        var renderer, scene, control, camera, box, box2, box3, box4, boxGeometry, box2Geometry, box3Geometry, box4Geometry;
+        var orbitControls;
+
+        function init() {
+
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            orbitControls = new THREE.OrbitControls( camera );  //Allow motion control using the mouse.
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            //The 4 boxes decrease in size, parent being the largest, child is next largest etc.
+            //Create the parent box.
+            boxGeometry = new THREE.BoxGeometry(4, 4, 4);
+            boxMaterial = new THREE.MeshNormalMaterial();
+            boxMaterial.transparent = true;
+            box = new THREE.Mesh(boxGeometry, boxMaterial);
+            box.name = 'box';
+            box.position.set(-9,0,0);
+
+            //Child box, that inherits rotation/translation from parent 'box'.
+            box2Geometry = new THREE.BoxGeometry(3,3,3);
+            box2 = new THREE.Mesh(box2Geometry,boxMaterial);
+            box2.position.set(4,0,3);   
+            box.add(box2);
+       
+            //"Grandchild" of 'box', inherits motions of both box and box2.
+            box3Geometry = new THREE.BoxGeometry(2,2,2);
+            box3 = new THREE.Mesh(box3Geometry,boxMaterial);
+            box3.position.set(2,0,3);   
+            box2.add(box3);
+
+            //"Great-grandchild" of box, inherits from all three other boxes.
+            box4Geometry = new THREE.BoxGeometry(1,1,1);
+            box4 = new THREE.Mesh(box4Geometry,boxMaterial);
+            box4.position.set(4.2,0,0);   
+            box.add(box4);
+
+            scene.add(box);
+
+            camera.position.x = 0;
+            camera.position.y = 0;
+            camera.position.z = 13;
+
+            //Ensure we are looking at the scene.
+            camera.lookAt(scene.position);
+
+            document.body.appendChild(renderer.domElement);
+
+            //Add your automatic motion settings to control:
+            control = new function () {
+
+                this.rotationSpeed = 0.005;
+            };
+        
+            render();
+        }
+
+        //(Unused) function that gives screen position of object.
+        function screenCoords(object) {
+
+            var vector = new THREE.Vector3();
+            vector.setFromMatrixPosition(object.matrixWorld);
+            
+            vector.project(camera);
+
+            var width = window.innerWidth, height = window.innerHeight;
+            var widthHalf = width / 2, heightHalf = height / 2;
+
+            vector.x = ( vector.x * widthHalf ) + widthHalf;
+            vector.y = -( vector.y * heightHalf ) + heightHalf;
+
+            return vector;
+        }
+
+        
+        function render() {
+
+            renderer.render(scene, camera);
+
+            box.updateMatrixWorld();
+
+            //Detach box4 from box, then translate box (leaving box4 untranslated).
+            THREE.SceneUtils.detach(box4,box,scene);
+
+            scene.getObjectByName('box').translateX(0.02);
+
+            box.updateMatrixWorld();
+
+            box4.updateMatrixWorld();
+
+            //Immediately reattach box4, so that it keeps the rotation of its parent.
+            THREE.SceneUtils.attach(box4,scene,box);
+
+            //Give all the boxes different rotations about their own axes.  (Additionally, the children inherit
+            //the rotations of their ancestors.)
+            scene.getObjectByName('box').rotation.x += 4*control.rotationSpeed;
+            scene.getObjectByName('box').children[0].rotation.x = 6* scene.getObjectByName('box').rotation.x;
+            scene.getObjectByName('box').children[0].children[0].rotation.x = 7*scene.getObjectByName('box').rotation.x;
+            
+            requestAnimationFrame(render);
+        }
+
+        window.onload = init;
+
+    </script>
+</body>
+
+</html>
